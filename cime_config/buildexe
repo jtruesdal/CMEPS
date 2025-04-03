@@ -14,7 +14,7 @@ sys.path.append(os.path.join(_CIMEROOT, "scripts", "Tools"))
 
 from standard_script_setup import *
 from CIME.buildlib         import parse_input
-from CIME.build            import get_standard_makefile_args
+from CIME.build            import get_standard_makefile_args, uses_kokkos
 from CIME.case             import Case
 from CIME.utils            import expect, run_cmd
 
@@ -82,6 +82,9 @@ def _main_func():
 
     gmake_args += " IAC_PRESENT=FALSE"
     expect((num_esp is None) or (int(num_esp) == 1), "ESP component restricted to one instance")
+
+    if uses_kokkos(case):
+        gmake_args += " USE_KOKKOS=TRUE "
 
     bld_root = os.path.join(exeroot,'cpl','obj')
     if not os.path.isdir(bld_root):
