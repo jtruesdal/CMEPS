@@ -263,12 +263,12 @@
       <value compset=".+" grid="a%ne120np4.pg2"             >192</value>
       <value compset=".+" grid="a%ne120np4.pg3"             >192</value>
       <value compset=".+" grid="a%ne120np4.pg4"             >192</value>
-      <value compset=".+" grid="a%ne240np4"                 >384</value>
-      <value compset=".+" grid="a%ne240np4.pg2"             >384</value>
-      <value compset=".+" grid="a%ne240np4.pg3"             >384</value>
-      <value compset=".+" grid="a%ne0np4CONUS.ne30x8"       >384</value>
+      <value compset=".+" grid="a%ne240np4"                 >288</value>
+      <value compset=".+" grid="a%ne240np4.pg2"             >288</value>
+      <value compset=".+" grid="a%ne240np4.pg3"             >288</value>
+      <value compset=".+" grid="a%ne0np4CONUS.ne30x8"       >288</value>
       <value compset=".+" grid="a%ne0np4.ARCTIC.ne30x4"     >192</value>
-      <value compset=".+" grid="a%ne0np4.ARCTICGRIS.ne30x8" >384</value>
+      <value compset=".+" grid="a%ne0np4.ARCTICGRIS.ne30x8" >288</value>
       <value compset=".+" grid="a%ne0np4.POLARCAP.ne30x4"   >192</value>
       <value compset=".+" grid="a%C24"                      >48</value>
       <value compset=".+" grid="a%C48"                      >48</value>
