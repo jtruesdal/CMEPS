@@ -817,6 +817,8 @@
   <entry id="GPU_TYPE">
     <type>char</type>
     <valid_values MACH="derecho">none,a100</valid_values>
+    <valid_values MACH="cirrus">none,a10,a2</valid_values>
+    <valid_values MACH="casper">none,v100,a100,h100</valid_values>
     <default_value>none</default_value>
     <group>build_def</group>
     <file>env_build.xml</file>
@@ -879,6 +881,25 @@
     automatically by XXX_USE_PETSC options (do not edit). Flag to turn
     on linking to the PETSc library. Currently this is used by
     CLM. This is currently only supported for certain machines.</desc>
+  </entry>
+
+ <entry id="USE_FTORCH">
+    <type>logical</type>
+    <valid_values>TRUE,FALSE</valid_values>
+    <default_value>FALSE</default_value>
+    <group>build_def</group>
+    <file>env_build.xml</file>
+    <desc> TRUE implies linking to the FTorch library to allow calls between
+    fortran and a PyTorch model that has been saved to TorchScript.
+    </desc>
+  </entry>
+
+  <entry id="TORCH_DIR">
+    <type>char</type>
+    <default_value></default_value>
+    <group>build_def</group>
+    <file>env_build.xml</file>
+    <desc>location of libtorch and supporting libraries, may be supplied by ftorch interface if not present</desc>
   </entry>
 
   <entry id="USE_ALBANY">
@@ -1461,7 +1482,7 @@
     <file>env_run.xml</file>
     <desc>wav2ocn state mapping file</desc>
   </entry>
-  
+
   <entry id="EPS_FRAC">
     <type>char</type>
     <default_value>1.0e-02</default_value>
@@ -1746,6 +1767,7 @@
     <file>env_mach_pes.xml</file>
     <desc>ROOTPE (mpi task in MPI_COMM_WORLD) for each component</desc>
   </entry>
+
   <entry id="MULTI_DRIVER">
     <type>logical</type>
     <default_value>TRUE</default_value>
@@ -1850,7 +1872,7 @@
     <file>env_mach_pes.xml</file>
     <desc>Number of GPUs per node used for simulation </desc>
   </entry>
-  
+
   <entry id="MAX_GPUS_PER_NODE">
     <type>integer</type>
     <default_value>0</default_value>
@@ -1858,7 +1880,7 @@
     <file>env_mach_pes.xml</file>
     <desc>Maximum number of GPUs allowed per node </desc>
   </entry>
-  
+
   <entry id="COSTPES_PER_NODE">
     <type>integer</type>
     <default_value>$MAX_MPITASKS_PER_NODE</default_value>
