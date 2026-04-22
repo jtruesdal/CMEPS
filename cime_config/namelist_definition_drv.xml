@@ -246,6 +246,19 @@
   <!-- All components orbital attributes           -->
   <!-- =========================================== -->
 
+  <entry id="planet" modify_via_xml="CAM_PLANET">
+    <type>char</type>
+    <category>orbital</category>
+    <group>CAM_attributes</group>
+    <valid_values>earth,mars</valid_values>
+    <desc>
+      Set by the xml variable CAM_PLANET in env_buile.xml
+    </desc>
+    <values>
+      <value>$CAM_PLANET</value>
+    </values>
+  </entry>
+
   <entry id="orb_mode">
     <type>char</type>
     <category>orbital</category>
@@ -335,6 +348,78 @@
     </desc>
     <values>
       <value>1.e36</value>
+    </values>
+  </entry>
+  <entry id="orb_exo_planet_radius">
+    <type>real</type>
+    <category>orbital</category>
+    <group>ALLCOMP_attributes</group>
+    <desc>
+      planet radius
+      default: 0.0D0
+    </desc>
+    <values>
+      <value >3.38992D6</value>
+    </values>
+  </entry>
+  <entry id="orb_exo_diurnal">
+    <type>real</type>
+    <category>orbital</category>
+    <group>ALLCOMP_attributes</group>
+    <desc>
+      Length of diurnal period
+      default: 0.0D0
+    </desc>
+    <values>
+      <value>88800.0D0</value>
+    </values>
+  </entry>
+  <entry id="orb_exo_surface_gravity">
+    <type>real</type>
+    <category>orbital</category>
+    <group>ALLCOMP_attributes</group>
+    <desc>
+      exo planet gravity
+      default: 0.0D0
+    </desc>
+    <values>
+      <value>3.711D0</value>
+    </values>
+  </entry>
+  <entry id="orb_exo_ndays">
+    <type>real</type>
+    <category>orbital</category>
+    <group>ALLCOMP_attributes</group>
+    <desc>
+      scaler to number of Earth days
+      default: 0.0D0
+    </desc>
+    <values>
+      <value>1.02777777777778D0</value>
+    </values>
+  </entry>
+  <entry id="orb_exo_porb">
+    <type>real</type>
+    <category>orbital</category>
+    <group>ALLCOMP_attributes</group>
+    <desc>
+      orbital period in Earth Days, for obliquity/eccentricity cycles
+      default: SHR_ORB_UNDEF_REAL (1.e36) (Not currently used in build-namelist)
+    </desc>
+    <values>
+      <value>687.0D0</value>
+    </values>
+  </entry>
+  <entry id="orb_exo_sday">
+    <type>real</type>
+    <category>orbital</category>
+    <group>ALLCOMP_attributes</group>
+    <desc>
+      sidereal period
+      default: 0.0D0
+    </desc>
+    <values>
+      <value>88642.663D0</value>
     </values>
   </entry>
 
