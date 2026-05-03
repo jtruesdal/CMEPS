@@ -31,6 +31,8 @@ module med_phases_aofluxes_mod
   use med_constants_mod     , only : dbug_flag    => med_constants_dbug_flag
   use med_utils_mod         , only : memcheck     => med_memcheck
   use med_utils_mod         , only : chkerr       => med_utils_chkerr
+  use med_field_info_mod    , only : med_field_info_type
+  use med_field_info_mod    , only : med_field_info_array_from_names_wtracers, med_field_info_array_from_state
   use perf_mod              , only : t_startf, t_stopf
 #ifndef CESMCOUPLED
   use ufs_const_mod         , only : rearth => SHR_CONST_REARTH
@@ -74,11 +76,11 @@ module med_phases_aofluxes_mod
   ! Private data
   !--------------------------------------------------------------------------
 
-  logical :: flds_wiso  ! use case
   logical :: compute_atm_dens
   logical :: compute_atm_thbot
   integer :: ocn_surface_flux_scheme ! use case
   logical :: add_gusts
+  logical :: aofluxes_use_shr_wv_sat ! use shr_wv_sat_mod to calculate qsat for atm-ocn flux calculations
 
   character(len=CS), pointer :: fldnames_ocn_in(:)
   character(len=CS), pointer :: fldnames_atm_in(:)
@@ -107,9 +109,7 @@ module med_phases_aofluxes_mod
      real(R8) , pointer :: uocn        (:) => null() ! ocn velocity, zonal
      real(R8) , pointer :: vocn        (:) => null() ! ocn velocity, meridional
      real(R8) , pointer :: tocn        (:) => null() ! ocean temperature
-     real(R8) , pointer :: roce_16O    (:) => null() ! ocn H2O ratio
-     real(R8) , pointer :: roce_HDO    (:) => null() ! ocn HDO ratio
-     real(R8) , pointer :: roce_18O    (:) => null() ! ocn H218O ratio
+
      ! input: atm
      real(R8) , pointer :: zbot        (:) => null() ! atm level height
      real(R8) , pointer :: ubot        (:) => null() ! atm velocity, zonal
@@ -122,9 +122,6 @@ module med_phases_aofluxes_mod
      real(R8) , pointer :: psfc        (:) => null() ! atm surface pressure
      real(R8) , pointer :: dens        (:) => null() ! atm bottom density
      real(R8) , pointer :: tbot        (:) => null() ! atm bottom surface T
-     real(R8) , pointer :: shum_16O    (:) => null() ! atm H2O tracer
-     real(R8) , pointer :: shum_HDO    (:) => null() ! atm HDO tracer
-     real(R8) , pointer :: shum_18O    (:) => null() ! atm H218O tracer
      real(R8) , pointer :: lwdn        (:) => null() ! atm downward longwave heat flux
      real(R8) , pointer :: rainc       (:) => null() ! convective rain flux
      ! local size and computational mask and area: on aoflux grid
@@ -139,9 +136,6 @@ module med_phases_aofluxes_mod
      real(R8) , pointer :: lat         (:) => null() ! heat flux: latent
      real(R8) , pointer :: lwup        (:) => null() ! lwup over ocean
      real(R8) , pointer :: evap        (:) => null() ! water flux: evaporation
-     real(R8) , pointer :: evap_16O    (:) => null() ! H2O flux: evaporation
-     real(R8) , pointer :: evap_HDO    (:) => null() ! HDO flux: evaporation
-     real(R8) , pointer :: evap_18O    (:) => null() ! H218O flux: evaporation
      real(R8) , pointer :: taux        (:) => null() ! wind stress, zonal
      real(R8) , pointer :: tauy        (:) => null() ! wind stress, meridional
      real(R8) , pointer :: tref        (:) => null() ! diagnostic: 2m ref T
@@ -182,6 +176,7 @@ contains
     integer             :: fieldcount
     type(med_fldList_type), pointer :: fldListMed_aoflux
     type(InternalState) :: is_local
+    type(med_field_info_type), allocatable :: field_info_array(:)
     character(len=*),parameter :: subname=' (med_phases_aofluxes_init_fldbuns) '
     !---------------------------------------
 
@@ -199,9 +194,16 @@ contains
     call med_fldList_getfldnames(fldListMed_aoflux%fields, fldnames_aof_out, rc=rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
 
+    ! Create field_info_array for FBMed_aoflux_a and FBMed_aoflux_o
+    call med_field_info_array_from_names_wtracers( &
+         field_names = fldnames_aof_out, &
+         field_info_array = field_info_array, &
+         rc = rc)
+    if (ChkErr(rc,__LINE__,u_FILE_u)) return
+
     ! Initialize FBMed_aoflux_a
     call FB_init(is_local%wrap%FBMed_aoflux_a, is_local%wrap%flds_scalar_name, &
-         STgeom=is_local%wrap%NStateImp(compatm), fieldnamelist=fldnames_aof_out, name='FBMed_aoflux_a', rc=rc)
+         field_info_array=field_info_array, STgeom=is_local%wrap%NStateImp(compatm), name='FBMed_aoflux_a', rc=rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
     if (maintask) then
        write(logunit,*)
@@ -210,7 +212,7 @@ contains
 
     ! Initialize FBMed_aoflux_o
     call FB_init(is_local%wrap%FBMed_aoflux_o, is_local%wrap%flds_scalar_name, &
-         STgeom=is_local%wrap%NStateImp(compocn), fieldnamelist=fldnames_aof_out, name='FBMed_aoflux_o', rc=rc)
+         field_info_array=field_info_array, STgeom=is_local%wrap%NStateImp(compocn), name='FBMed_aoflux_o', rc=rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
     if (maintask) then
        write(logunit,'(a)') trim(subname)//' initialized FB FBMed_aoflux_o'
@@ -228,8 +230,13 @@ contains
           if (maintask) then
              write(logunit,'(a)') trim(subname)//' creating field bundle FBImp(compatm,compocn)'
           end if
+          call med_field_info_array_from_state( &
+               state = is_local%wrap%NStateImp(compatm), &
+               field_info_array = field_info_array, &
+               rc = rc)
+          if (ChkErr(rc,__LINE__,u_FILE_u)) return
           call FB_init(is_local%wrap%FBImp(compatm,compocn), is_local%wrap%flds_scalar_name, &
-               STgeom=is_local%wrap%NStateImp(compocn), STflds=is_local%wrap%NStateImp(compatm), &
+               field_info_array=field_info_array, STgeom=is_local%wrap%NStateImp(compocn), &
                name='FBImp'//trim(compname(compatm))//'_'//trim(compname(compocn)), rc=rc)
           if (ChkErr(rc,__LINE__,u_FILE_u)) return
        end if
@@ -243,8 +250,13 @@ contains
           if (maintask) then
              write(logunit,'(a)') trim(subname)//' creating field bundle FBImp(compocn,compatm)'
           end if
+          call med_field_info_array_from_state( &
+               state = is_local%wrap%NStateImp(compocn), &
+               field_info_array = field_info_array, &
+               rc = rc)
+          if (ChkErr(rc,__LINE__,u_FILE_u)) return
           call FB_init(is_local%wrap%FBImp(compocn,compatm), is_local%wrap%flds_scalar_name, &
-               STgeom=is_local%wrap%NStateImp(compatm), STflds=is_local%wrap%NStateImp(compocn), &
+               field_info_array = field_info_array, STgeom=is_local%wrap%NStateImp(compatm), &
                name='FBImp'//trim(compname(compocn))//'_'//trim(compname(compatm)), rc=rc)
           if (ChkErr(rc,__LINE__,u_FILE_u)) return
        end if
@@ -386,13 +398,6 @@ contains
     ! Initialize module variables
     !----------------------------------
 
-    call NUOPC_CompAttributeGet(gcomp, name='flds_wiso', value=cvalue, isPresent=isPresent, isSet=isSet, rc=rc)
-    if (chkerr(rc,__LINE__,u_FILE_u)) return
-    if (isPresent .and. isSet) then
-       read(cvalue,*) flds_wiso
-    else
-       flds_wiso = .false.
-    end if
     call NUOPC_CompAttributeGet(gcomp, name='ocn_surface_flux_scheme', value=cvalue, isPresent=isPresent, isSet=isSet, rc=rc)
     if (chkerr(rc,__LINE__,u_FILE_u)) return
     if (isPresent .and. isSet) then
@@ -414,6 +419,20 @@ contains
     else
        add_gusts = .false.
     end if
+
+    call NUOPC_CompAttributeGet(gcomp, name='aofluxes_use_shr_wv_sat', value=cvalue, isPresent=isPresent, isSet=isSet, rc=rc)
+    if (chkerr(rc,__LINE__,u_FILE_u)) return
+    if (isPresent .and. isSet) then
+       read(cvalue,*) aofluxes_use_shr_wv_sat
+    else
+       aofluxes_use_shr_wv_sat = .false.
+    end if
+#ifdef CESMCOUPLED
+    if (maintask) then
+       write(logunit,*)
+       write(logunit,'(a,l7)') trim(subname)//' aofluxes_use_shr_wv_sat = ', aofluxes_use_shr_wv_sat
+    end if
+#endif
 
     ! bottom level potential temperature and/or botom level density
     ! will need to be computed if not received from the atm
@@ -622,6 +641,7 @@ contains
     integer             :: maptype
     type(ESMF_Field)    :: lfield
     type(ESMF_Mesh)     :: lmesh
+    type(med_field_info_type), allocatable :: field_info_array(:)
     real(R8), pointer   :: garea(:) => null()
     type(ESMF_CoordSys_Flag)   :: coordSys
     character(len=*),parameter :: subname=' (med_aofluxes_init_atmgrid) '
@@ -637,15 +657,15 @@ contains
     ! input fields from atm and ocn on atm grid
     ! ------------------------
 
-    if (flds_wiso) then
-       allocate(fldnames_ocn_in(5))
-       fldnames_ocn_in = (/'So_omask    ','So_t        ','So_u        ','So_v        ','So_roce_wiso' /)
-    else
-       allocate(fldnames_ocn_in(4))
-       fldnames_ocn_in = (/'So_omask','So_t    ','So_u    ','So_v    '/)
-    end if
+    allocate(fldnames_ocn_in(4))
+    fldnames_ocn_in = (/'So_omask','So_t    ','So_u    ','So_v    '/)
+    call med_field_info_array_from_names_wtracers( &
+         field_names = fldnames_ocn_in, &
+         field_info_array = field_info_array, &
+         rc = rc)
+    if (chkerr(rc,__LINE__,u_FILE_u)) return
     call FB_init(FBocn_a, is_local%wrap%flds_scalar_name, &
-         FBgeom=is_local%wrap%FBImp(compatm,compatm), fieldnamelist=fldnames_ocn_in, name='FBocn_a', rc=rc)
+         field_info_array=field_info_array, FBgeom=is_local%wrap%FBImp(compatm,compatm), name='FBocn_a', rc=rc)
     if (chkerr(rc,__LINE__,u_FILE_u)) return
 
     call set_aoflux_in_pointers(is_local%wrap%FBImp(compatm,compatm), FBocn_a, aoflux_in, lsize, rc=rc)
@@ -972,7 +992,7 @@ contains
     use med_methods_mod, only : FB_fldchk => med_methods_FB_fldchk
     use med_methods_mod, only : FB_diagnose  => med_methods_FB_diagnose
 #ifdef CESMCOUPLED
-    use shr_flux_mod   , only : flux_atmocn
+    use flux_atmocn_driver_mod, only : flux_atmocn_driver
 #else
     use flux_atmocn_mod, only : flux_atmocn
 #endif
@@ -1068,24 +1088,18 @@ contains
     !----------------------------------
 
 #ifdef CESMCOUPLED
-    call flux_atmocn (logunit=logunit, &
+    call flux_atmocn_driver (logunit=logunit, &
          nMax=aoflux_in%lsize, &
-         zbot=aoflux_in%zbot, ubot=aoflux_in%ubot, vbot=aoflux_in%vbot, thbot=aoflux_in%thbot, qbot=aoflux_in%shum, &
-         rainc=aoflux_in%rainc, &
-         s16O=aoflux_in%shum_16O, sHDO=aoflux_in%shum_HDO, s18O=aoflux_in%shum_18O, rbot=aoflux_in%dens, &
-         tbot=aoflux_in%tbot, us=aoflux_in%uocn, vs=aoflux_in%vocn, pslv=aoflux_in%psfc, ts=aoflux_in%tocn, &
-         mask=aoflux_in%mask, seq_flux_atmocn_minwind=0.5_r8, &
-         sen=aoflux_out%sen, lat=aoflux_out%lat, lwup=aoflux_out%lwup, &
-         r16O=aoflux_in%roce_16O, rhdo=aoflux_in%roce_HDO, r18O=aoflux_in%roce_18O, &
-         evap=aoflux_out%evap, evap_16O=aoflux_out%evap_16O, evap_HDO=aoflux_out%evap_HDO, evap_18O=aoflux_out%evap_18O, &
+         zbot=aoflux_in%zbot, ubot=aoflux_in%ubot, vbot=aoflux_in%vbot, thbot=aoflux_in%thbot, &
+         qbot=aoflux_in%shum, rainc=aoflux_in%rainc, rbot=aoflux_in%dens, &
+         tbot=aoflux_in%tbot, us=aoflux_in%uocn, vs=aoflux_in%vocn, pslv=aoflux_in%psfc, &
+         ts=aoflux_in%tocn, mask=aoflux_in%mask, seq_flux_atmocn_minwind=0.5_r8, &
+         sen=aoflux_out%sen, lat=aoflux_out%lat, lwup=aoflux_out%lwup, evap=aoflux_out%evap, &
          taux=aoflux_out%taux, tauy=aoflux_out%tauy, tref=aoflux_out%tref, qref=aoflux_out%qref, &
          ocn_surface_flux_scheme=ocn_surface_flux_scheme, &
-         add_gusts=add_gusts, &
-         duu10n=aoflux_out%duu10n, &
-         ugust_out = aoflux_out%ugust_out, &
-         u10res = aoflux_out%u10res, &
-         ustar_sv=aoflux_out%ustar, re_sv=aoflux_out%re, ssq_sv=aoflux_out%ssq, &
-         missval=0.0_r8)
+         add_gusts=add_gusts, aofluxes_use_shr_wv_sat=aofluxes_use_shr_wv_sat, &
+         duu10n=aoflux_out%duu10n, ugust_out = aoflux_out%ugust_out, u10res = aoflux_out%u10res, &
+         ustar_sv=aoflux_out%ustar, re_sv=aoflux_out%re, ssq_sv=aoflux_out%ssq, missval=0.0_r8)
 
 #else
 #ifdef UFS_AOFLUX
@@ -1658,19 +1672,6 @@ end subroutine med_aofluxes_map_ogrid2xgrid_input
        if (chkerr(rc,__LINE__,u_FILE_u)) return
     end if
 
-    if (flds_wiso) then
-       call fldbun_getfldptr(fldbun_a, 'Sa_shum_16O', aoflux_in%shum_16O, xgrid=xgrid, rc=rc)
-       if (chkerr(rc,__LINE__,u_FILE_u)) return
-       call fldbun_getfldptr(fldbun_a, 'Sa_shum_18O', aoflux_in%shum_18O, xgrid=xgrid, rc=rc)
-       if (chkerr(rc,__LINE__,u_FILE_u)) return
-       call fldbun_getfldptr(fldbun_a, 'Sa_shum_HDO', aoflux_in%shum_HDO, xgrid=xgrid, rc=rc)
-       if (chkerr(rc,__LINE__,u_FILE_u)) return
-    else
-       allocate(aoflux_in%shum_16O(lsize)); aoflux_in%shum_16O(:) = 0._R8
-       allocate(aoflux_in%shum_18O(lsize)); aoflux_in%shum_18O(:) = 0._R8
-       allocate(aoflux_in%shum_HDO(lsize)); aoflux_in%shum_HDO(:) = 0._R8
-    end if
-
     ! ------------------------
     ! input fields from ocn on aoflux_grid
     ! ------------------------
@@ -1684,18 +1685,6 @@ end subroutine med_aofluxes_map_ogrid2xgrid_input
     if (chkerr(rc,__LINE__,u_FILE_u)) return
     call fldbun_getfldptr(fldbun_o, 'So_v', aoflux_in%vocn, xgrid=xgrid, rc=rc)
     if (chkerr(rc,__LINE__,u_FILE_u)) return
-    if (flds_wiso) then
-       call fldbun_getfldptr(fldbun_o, 'So_roce_16O', aoflux_in%roce_16O, xgrid=xgrid, rc=rc)
-       if (chkerr(rc,__LINE__,u_FILE_u)) return
-       call fldbun_getfldptr(fldbun_o, 'So_roce_18O', aoflux_in%roce_18O, xgrid=xgrid, rc=rc)
-       if (chkerr(rc,__LINE__,u_FILE_u)) return
-       call fldbun_getfldptr(fldbun_o, 'So_roce_HDO', aoflux_in%roce_HDO, xgrid=xgrid, rc=rc)
-       if (chkerr(rc,__LINE__,u_FILE_u)) return
-    else
-       allocate(aoflux_in%roce_16O(aoflux_in%lsize)); aoflux_in%roce_16O(:) = 0._R8
-       allocate(aoflux_in%roce_18O(aoflux_in%lsize)); aoflux_in%roce_18O(:) = 0._R8
-       allocate(aoflux_in%roce_HDO(aoflux_in%lsize)); aoflux_in%roce_HDO(:) = 0._R8
-    end if
 
   end subroutine set_aoflux_in_pointers
 
@@ -1741,18 +1730,6 @@ end subroutine med_aofluxes_map_ogrid2xgrid_input
     call fldbun_getfldptr(fldbun, 'Faox_lwup', aoflux_out%lwup, xgrid=xgrid, rc=rc)
     if (chkerr(rc,__LINE__,u_FILE_u)) return
 
-    if (flds_wiso) then
-       call fldbun_getfldptr(fldbun, 'Faox_evap_16O', aoflux_out%evap_16O, xgrid=xgrid, rc=rc)
-       if (chkerr(rc,__LINE__,u_FILE_u)) return
-       call fldbun_getfldptr(fldbun, 'Faox_evap_18O', aoflux_out%evap_18O, xgrid=xgrid, rc=rc)
-       if (chkerr(rc,__LINE__,u_FILE_u)) return
-       call fldbun_getfldptr(fldbun, 'Faox_evap_HDO', aoflux_out%evap_HDO, xgrid=xgrid, rc=rc)
-       if (chkerr(rc,__LINE__,u_FILE_u)) return
-    else
-       allocate(aoflux_out%evap_16O(lsize)); aoflux_out%evap_16O(:) = 0._R8
-       allocate(aoflux_out%evap_18O(lsize)); aoflux_out%evap_18O(:) = 0._R8
-       allocate(aoflux_out%evap_HDO(lsize)); aoflux_out%evap_HDO(:) = 0._R8
-    end if
     if (add_gusts) then
        call fldbun_getfldptr(fldbun, 'So_ugustOut', aoflux_out%ugust_out, xgrid=xgrid, rc=rc)
        if (chkerr(rc,__LINE__,u_FILE_u)) return
