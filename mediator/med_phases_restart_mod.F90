@@ -19,6 +19,7 @@ module med_phases_restart_mod
   use shr_is_restart_fh_mod   , only : log_restart_fh
 #endif
   use shr_log_mod             , only : shr_log_error
+  use med_ufs_trace_wrapper_mod, only : ufs_trace_wrapper
 
   implicit none
   private
@@ -198,6 +199,7 @@ contains
     character(len=*), parameter :: subname='(med_phases_restart_write)'
     !---------------------------------------
 
+    if (maintask) call ufs_trace_wrapper("cmeps", "med_phases_restart_write", "B")
     call t_startf('MED:'//subname)
     if (dbug_flag > 5) then
        call ESMF_LogWrite(trim(subname)//": called", ESMF_LOGMSG_INFO)
@@ -348,7 +350,7 @@ contains
              call med_io_enddef(io_file)
           end if
 
-          tbnds = days_since
+          tbnds = (/days_since,days_since/)
           call ESMF_LogWrite(trim(subname)//": time "//trim(time_units), ESMF_LOGMSG_INFO)
           if (whead(m)) then
              call ESMF_ClockGet(clock, calendar=calendar, rc=rc)
@@ -356,7 +358,7 @@ contains
              call med_io_define_time(io_file, time_units, calendar, rc=rc)
              if (ChkErr(rc,__LINE__,u_FILE_u)) return
           else
-             call med_io_write_time(io_file, days_since, tbnds=(/days_since,days_since/), nt=1, rc=rc)
+             call med_io_write_time(io_file, days_since, tbnds=tbnds, nt=1, rc=rc)
              if (ChkErr(rc,__LINE__,u_FILE_u)) return
           end if
 
@@ -508,6 +510,7 @@ contains
     endif
     call t_stopf('MED:'//subname)
 
+    if (maintask) call ufs_trace_wrapper("cmeps", "med_phases_restart_write", "E")
   end subroutine med_phases_restart_write
 
   !===============================================================================
@@ -543,6 +546,7 @@ contains
     character(ESMF_MAXSTR) :: restart_pfile  ! Local path to restart pointer filename
     character(len=*), parameter :: subname='(med_phases_restart_read)'
     !---------------------------------------
+    if (maintask) call ufs_trace_wrapper("cmeps", "med_phases_restart_read", "B")
     call t_startf('MED:'//subname)
     call ESMF_LogWrite(trim(subname)//": called", ESMF_LOGMSG_INFO)
     rc = ESMF_SUCCESS
@@ -661,6 +665,7 @@ contains
     call ESMF_LogWrite(trim(subname)//": done", ESMF_LOGMSG_INFO)
     call t_stopf('MED:'//subname)
 
+    if (maintask) call ufs_trace_wrapper("cmeps", "med_phases_restart_read", "E")
   end subroutine med_phases_restart_read
 
   !===============================================================================

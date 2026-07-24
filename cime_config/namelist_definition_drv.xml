@@ -853,7 +853,6 @@
     </desc>
     <values>
       <value>on</value>
-      <value COMP_LND="xlnd">off</value>
     </values>
   </entry>
   <entry id="remove_negative_runoff_lnd">
@@ -2182,6 +2181,10 @@
     <desc>Number of time samples per file.</desc>
     <values>
       <value>30</value>
+      <!-- Generate daily WW3 hist files for ERS/ERI tests to prevent mismatched filenames
+        and contents between initial and restart runs.-->
+      <value TESTCASE='ERS'>1</value>
+      <value TESTCASE='ERI'>1</value>
     </values>
   </entry>
 
@@ -2266,7 +2269,10 @@
     <category>mapping</category>
     <input_pathname>abs</input_pathname>
     <group>MED_attributes</group>
-    <desc>lnd to rof mapping, 'unset' or 'idmap' are normal possible values (mapping file given for mizuRoute grids)</desc>
+    <desc>lnd2rof flux (conservative) mapping file; 'unset' or 'idmap' are normal possible values. (This mapping file is used for both
+    consd and consf mappings; as discussed in https://github.com/ESCOMP/CMEPS/issues/408, the results of these two mappings are the
+    same within roundoff in CMEPS due to the normalization that is done when applying the mapping weights. For simplicity, and because
+    land mesh files generally don't have a mask, this mapping file should be generated with '--norm_type dstarea'.)</desc>
     <values>
       <value>$LND2ROF_FMAPNAME</value>
       <value samegrid_lnd_rof='true'>idmap</value>
@@ -2533,18 +2539,6 @@
     </values>
   </entry>
 
-  <entry  id="flds_wiso" modify_via_xml="FLDS_WISO">
-    <type>logical</type>
-    <category>flds</category>
-    <group>ALLCOMP_attributes</group>
-    <desc>
-      Pass water isotopes between components
-    </desc>
-    <values>
-      <value>.false.</value>
-    </values>
-  </entry>
-
   <entry id="flds_r2l_stream_channel_depths">
     <type>logical</type>
     <category>flds</category>
@@ -2593,6 +2587,82 @@
      <value>.false.</value>
      <value COMP_GLC="cism">$CISM_EVOLVE</value>
     </values>
+  </entry>
+
+  <entry id="water_tracer_names" modify_via_xml="WATER_TRACERS" skip_default_entry="true">
+   <type>char</type>
+   <category>water_tracers</category>
+   <group>ALLCOMP_attributes</group>
+   <desc>
+      Colon-delimited list of names of water tracers in this run.
+   </desc>
+   <values>
+      <value></value>
+   </values>
+  </entry>
+
+  <entry id="water_tracer_species" modify_via_xml="WATER_TRACERS" skip_default_entry="true">
+   <type>char</type>
+   <category>water_tracers</category>
+   <group>ALLCOMP_attributes</group>
+   <desc>
+      Colon-delimited list of species of water tracers in this run.
+
+      Each element in the list corresponds to an element in water_tracer_names. A value of
+      '-' for a given element indicates a standard water tracer (i.e., a tracer of bulk
+      water).
+   </desc>
+   <values>
+      <value></value>
+   </values>
+  </entry>
+
+  <entry id="water_tracer_initial_ratios" skip_default_entry="true">
+   <type>char</type>
+   <category>water_tracers</category>
+   <group>ALLCOMP_attributes</group>
+   <desc>
+      Colon-delimited list of initial water tracer ratios (as a fraction of total water).
+
+      Each element in the list corresponds to an element in water_tracer_names.
+
+      For water isotopes, this ratio is typically set to 1 for numerical reasons; the
+      actual isotopic ratios can then be determined via reference to standard global
+      ratios.
+   </desc>
+   <values>
+      <value></value>
+   </values>
+  </entry>
+
+  <entry id="water_tracers_do_checks">
+   <type>logical</type>
+   <category>water_tracers</category>
+   <group>ALLCOMP_attributes</group>
+   <desc>
+      Check consistency between water tracer fields and their corresponding bulk fields.
+
+      This should only be used with artificial tracers that maintain a fixed ratio.
+   </desc>
+   <values>
+      <value>.false.</value>
+   </values>
+  </entry>
+
+  <entry id="water_tracers_variables_not_checked">
+   <type>char</type>
+   <category>water_tracers</category>
+   <group>ALLCOMP_attributes</group>
+   <desc>
+      Colon-delimited list of variables for which water tracer consistency checks should be skipped.
+
+      Each entry must match the variable name passed to shr_wtracers_check_tracer_ratios.
+      For checks of mediator fields, these are of the form FieldBundleName%FieldName.
+      For example: "FBImpatm%Sa_shum_wtracers:FBExprof%Flrl_irrig_wtracers".
+   </desc>
+   <values>
+      <value></value>
+   </values>
   </entry>
 
   <!-- =========================== -->
