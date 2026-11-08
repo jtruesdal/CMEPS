@@ -361,6 +361,7 @@
     <values>
       <value>$MASK_MESH</value>
       <value single_column='true'>null</value>
+      <value single_column='true' single_column_mesh='true'>$MASK_MESH</value>
     </values>
   </entry>
   <entry id="ATM_model" modify_via_xml="COMP_ATM">

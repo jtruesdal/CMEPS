@@ -104,6 +104,12 @@ def _create_drv_namelists(case, infile, confdir, nmlgen, files):
         config["single_column"] = "true"
     else:
         config["single_column"] = "false"
+    # single column without a domain file (PTS_DOMAINFILE = mesh): the driver computes the
+    # column's land/ocean fractions from the mask mesh, so mesh_mask must be passed through
+    if config["single_column"] == "true" and case.get_value("PTS_DOMAINFILE") == "mesh":
+        config["single_column_mesh"] = "true"
+    else:
+        config["single_column_mesh"] = "false"
 
     # needed for determining the run sequence
     config["COMP_ATM"] = case.get_value("COMP_ATM")
