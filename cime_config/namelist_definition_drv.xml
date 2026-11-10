@@ -583,6 +583,7 @@
     </desc>
     <values>
       <value>$PTS_DOMAINFILE</value>
+      <value single_column_mesh='true'>mesh</value>
     </values>
   </entry>
 
