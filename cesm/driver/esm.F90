@@ -1282,7 +1282,7 @@ contains
 
     ! Set the special value for single column - if pts_lat or pts_lon are equal to the special value
     ! in the component cap - then single column is not activated
-    write(cvalue,*) scol_spval
+    write(cvalue,'(es24.16e3)') scol_spval  ! 17 digits: exact round trip
     call NUOPC_CompAttributeSet(gcomp, name='scol_spval', value=trim(cvalue), rc=rc)
     if (chkerr(rc,__LINE__,u_FILE_u)) return
 
@@ -1353,10 +1353,10 @@ contains
           end if
           deallocate(ownedElemCoords)
 
-          write(cvalue,*) scol_lon
+          write(cvalue,'(es24.16e3)') scol_lon  ! 17 digits: exact round trip
           call NUOPC_CompAttributeSet(gcomp, name='scol_lon', value=trim(cvalue), rc=rc)
           if (chkerr(rc,__LINE__,u_FILE_u)) return
-          write(cvalue,*) scol_lat
+          write(cvalue,'(es24.16e3)') scol_lat  ! 17 digits: exact round trip
           call NUOPC_CompAttributeSet(gcomp, name='scol_lat', value=trim(cvalue), rc=rc)
           if (chkerr(rc,__LINE__,u_FILE_u)) return
           write(cvalue,*) lsize
@@ -1514,13 +1514,13 @@ contains
           scol_area = dataptr(scol_mesh_n)
 
           ! Set single column attribute values for all components
-          write(cvalue,*) scol_lon
+          write(cvalue,'(es24.16e3)') scol_lon  ! 17 digits: exact round trip
           call NUOPC_CompAttributeSet(gcomp, name='scol_lon', value=trim(cvalue), rc=rc)
           if (chkerr(rc,__LINE__,u_FILE_u)) return
-          write(cvalue,*) scol_lat
+          write(cvalue,'(es24.16e3)') scol_lat  ! 17 digits: exact round trip
           call NUOPC_CompAttributeSet(gcomp, name='scol_lat', value=trim(cvalue), rc=rc)
           if (chkerr(rc,__LINE__,u_FILE_u)) return
-          write(cvalue,*) scol_area
+          write(cvalue,'(es24.16e3)') scol_area  ! 17 digits: exact round trip
           call NUOPC_CompAttributeSet(gcomp, name='scol_area', value=trim(cvalue), rc=rc)
           if (chkerr(rc,__LINE__,u_FILE_u)) return
 
@@ -1565,7 +1565,7 @@ contains
 
        end if
 
-       write(cvalue,*) scol_area
+       write(cvalue,'(es24.16e3)') scol_area  ! 17 digits: exact round trip
        call NUOPC_CompAttributeSet(gcomp, name='scol_area', value=trim(cvalue), rc=rc)
        if (chkerr(rc,__LINE__,u_FILE_u)) return
 
@@ -1573,7 +1573,7 @@ contains
        call NUOPC_CompAttributeSet(gcomp, name='scol_lndmask', value=trim(cvalue), rc=rc)
        if (chkerr(rc,__LINE__,u_FILE_u)) return
 
-       write(cvalue,*) scol_lndfrac
+       write(cvalue,'(es24.16e3)') scol_lndfrac  ! 17 digits: exact round trip
        call NUOPC_CompAttributeSet(gcomp, name='scol_lndfrac', value=trim(cvalue), rc=rc)
        if (chkerr(rc,__LINE__,u_FILE_u)) return
 
@@ -1581,7 +1581,7 @@ contains
        call NUOPC_CompAttributeSet(gcomp, name='scol_ocnmask', value=trim(cvalue), rc=rc)
        if (chkerr(rc,__LINE__,u_FILE_u)) return
 
-       write(cvalue,*) scol_ocnfrac
+       write(cvalue,'(es24.16e3)') scol_ocnfrac  ! 17 digits: exact round trip
        call NUOPC_CompAttributeSet(gcomp, name='scol_ocnfrac', value=trim(cvalue), rc=rc)
        if (chkerr(rc,__LINE__,u_FILE_u)) return
 
